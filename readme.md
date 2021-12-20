@@ -1,5 +1,4 @@
 # Algorithmic folding course - In-depth assignment on Gauss Thinning
-=======
 
 ## Project
 
