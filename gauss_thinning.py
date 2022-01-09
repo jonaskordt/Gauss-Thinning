@@ -188,4 +188,6 @@ def gauss_thinning(
 
         print(f"Finished iteration {i}.")
 
+    if render:
+        return V_dash, plot
     return V_dash
