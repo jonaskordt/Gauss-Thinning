@@ -167,9 +167,7 @@ def gauss_thinning(
     V_dash = np.copy(V)
 
     if render:
-        plot = mp.Viewer({})
-        mesh = plot.add_mesh(V_dash, F, c=V_dash[:, 0])
-        display(plot._renderer)  # type: ignore
+        plot = mp.plot(V_dash, F, c=V_dash[:, 0], return_plot=True)
 
     for i in range(num_iterations):
         N = igl.per_face_normals(V_dash, F, np.array([1, 0, 0], dtype=float))
@@ -186,7 +184,7 @@ def gauss_thinning(
         V_dash = np.asarray(LA.solve(A, eps * np.dot(M, V_dash) - b))
 
         if render:
-            plot.update_object(oid=mesh, vertices=V_dash, colors=V_dash[:, 0], faces=F)
+            plot.update_object(vertices=V_dash, colors=V_dash[:, 0], faces=F)
 
         print(f"Finished iteration {i}.")
 
