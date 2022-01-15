@@ -33,13 +33,13 @@ def triangle_adjacency(f, nv):
     return ret  # for every face a list of faces which are adjacent
 
 
-def collectNeighbors(adj, V, N, r, nr):
+def collectNeighbors(adj, B, N, r, nr):
     stack = []
-    flag = [-1 for _ in range(len(V))]
-    result = [[] for _ in range(len(V))]
+    flag = [-1 for _ in range(len(B))]
+    result = [[] for _ in range(len(B))]
     normal_cone_threshold = math.cos(nr * math.pi / 180)
 
-    for i in range(len(V)):
+    for i in range(len(B)):
         stack.append(i)
         flag[i] = i
 
@@ -51,7 +51,7 @@ def collectNeighbors(adj, V, N, r, nr):
             for j in adj[id]:
                 if (
                     flag[j] != i
-                    and LA.norm(V[i] - V[j]) < r
+                    and LA.norm(B[i] - B[j]) < r
                     and np.dot(N[i], N[j]) > normal_cone_threshold
                 ):
                     stack.append(j)
