@@ -20,9 +20,15 @@ export class Renderer {
     this.scene.add(
       new THREE.Mesh(
         new THREE.TorusGeometry(1, 0.5),
-        new THREE.MeshBasicMaterial({ color: "red" })
+        new THREE.MeshStandardMaterial({ color: "red" })
       )
     );
+
+    const directionalLight = new THREE.DirectionalLight("white", 0.6);
+    directionalLight.position.y = 1;
+    this.camera.add(directionalLight);
+    const ambientLight = new THREE.AmbientLight("white", 0.5);
+    this.scene.add(this.camera, ambientLight);
 
     this.camera.position.set(2, 2, 2);
     this.camera.lookAt(0, 0, 0);
