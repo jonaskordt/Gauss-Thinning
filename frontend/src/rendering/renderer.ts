@@ -37,6 +37,8 @@ export class Renderer {
       this.camera,
       this.renderer.domElement
     );
+    this.orbitControls.minDistance = 0.5;
+    this.orbitControls.maxDistance = 8;
     this.orbitControls.addEventListener("change", this.lazyRender);
 
     window.addEventListener("resize", this.resize);
