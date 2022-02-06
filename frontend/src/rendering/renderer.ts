@@ -15,6 +15,7 @@ export class Renderer {
 
   protected orbitControls: OrbitControls;
   protected object?: THREE.Object3D;
+  protected material = new THREE.MeshStandardMaterial();
 
   protected loader = new OBJLoader();
 
@@ -75,6 +76,10 @@ export class Renderer {
       if (this.object) {
         this.scene.remove(this.object);
       }
+
+      object.children.forEach(
+        (child) => ((child as THREE.Mesh).material = this.material)
+      );
 
       this.object = object;
       this.scene.add(object);
