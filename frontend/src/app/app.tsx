@@ -4,8 +4,11 @@ import { GlobalStyles } from "../theme";
 import { Renderer } from "../rendering";
 import { ImportZone } from "../components";
 import { useIsDraggedOver } from "../utils";
+import { Client } from "../client";
 
 const renderer = new Renderer();
+const client = new Client();
+client.connect();
 
 const Cover = styled.div`
   position: absolute;
