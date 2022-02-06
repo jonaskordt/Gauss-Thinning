@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
 
 export class Renderer {
   public renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -12,18 +13,14 @@ export class Renderer {
     10
   );
 
-  private orbitControls: OrbitControls;
+  protected orbitControls: OrbitControls;
+  protected object?: THREE.Object3D;
 
-  private lazyRenderTriggered = true;
+  protected loader = new OBJLoader();
+
+  protected lazyRenderTriggered = true;
 
   constructor() {
-    this.scene.add(
-      new THREE.Mesh(
-        new THREE.TorusGeometry(1, 0.5),
-        new THREE.MeshStandardMaterial({ color: "red" })
-      )
-    );
-
     const directionalLight = new THREE.DirectionalLight("white", 0.6);
     directionalLight.position.y = 1;
     this.camera.add(directionalLight);
@@ -71,5 +68,18 @@ export class Renderer {
       this.lazyRenderTriggered = false;
       this.eagerRender();
     }
+  };
+
+  public loadObject = (url: string) => {
+    this.loader.load(url, (object) => {
+      if (this.object) {
+        this.scene.remove(this.object);
+      }
+
+      this.object = object;
+      this.scene.add(object);
+
+      this.lazyRender();
+    });
   };
 }

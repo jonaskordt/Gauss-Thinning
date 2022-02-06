@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import { GlobalStyles } from "../theme";
 import { Renderer } from "../rendering";
+import { ImportZone } from "../components";
+import { useIsDraggedOver } from "../utils";
 
 const renderer = new Renderer();
 
-const CanvasContainer = styled.div`
+const Cover = styled.div`
   position: absolute;
   top: 0;
   bottom: 0;
@@ -27,10 +29,31 @@ export const App: React.FC = () => {
     };
   }, [canvas, ref]);
 
+  const [isObjectLoaded, setIsObjetLoaded] = useState(false);
+  const importFile = useCallback((url: string) => {
+    renderer.loadObject(url);
+    setIsObjetLoaded(true);
+  }, []);
+
+  const [isDraggedOver, { onDrop, ...dragListeners }] = useIsDraggedOver();
+  const onOutsideDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      onDrop();
+    },
+    [onDrop]
+  );
+
   return (
-    <>
+    <Cover {...dragListeners} onDrop={onOutsideDrop}>
       <GlobalStyles />
-      <CanvasContainer ref={setRef} />
-    </>
+      <Cover ref={setRef} />
+      <ImportZone
+        isDraggedOver={isDraggedOver}
+        onDrop={onDrop}
+        importFile={importFile}
+        isObjectLoaded={isObjectLoaded}
+      />
+    </Cover>
   );
 };
