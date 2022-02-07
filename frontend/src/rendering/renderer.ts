@@ -14,8 +14,12 @@ export class Renderer {
   );
 
   protected orbitControls: OrbitControls;
-  protected object?: THREE.Object3D;
-  protected material = new THREE.MeshStandardMaterial();
+  protected object?: THREE.Mesh;
+  protected material = new THREE.MeshStandardMaterial({ vertexColors: true });
+
+  protected raycaster = new THREE.Raycaster();
+  protected path: number[] = [];
+  protected isPointerDown = false;
 
   protected loader = new OBJLoader();
 
@@ -35,12 +39,21 @@ export class Renderer {
       this.camera,
       this.renderer.domElement
     );
+    this.orbitControls.mouseButtons = {
+      LEFT: -1,
+      MIDDLE: THREE.MOUSE.ROTATE,
+      RIGHT: THREE.MOUSE.ROTATE,
+    };
     this.orbitControls.minDistance = 0.5;
     this.orbitControls.maxDistance = 8;
     this.orbitControls.addEventListener("change", this.lazyRender);
 
     window.addEventListener("resize", this.resize);
     this.resize();
+
+    window.addEventListener("pointerdown", this.onPointerDown);
+    window.addEventListener("pointermove", this.onPointerMove);
+    window.addEventListener("pointerup", this.onPointerUp);
 
     this.renderer.setAnimationLoop(this.animate);
   }
@@ -73,18 +86,67 @@ export class Renderer {
 
   public loadObject = (url: string) => {
     this.loader.load(url, (object) => {
+      if (!object.children.length) return;
+
       if (this.object) {
         this.scene.remove(this.object);
       }
 
-      object.children.forEach(
-        (child) => ((child as THREE.Mesh).material = this.material)
+      this.object = object.children[0] as THREE.Mesh;
+      this.object.material = this.material;
+
+      const count = this.object.geometry.attributes.position.count;
+      this.object.geometry.setAttribute(
+        "color",
+        new THREE.BufferAttribute(new Float32Array(count * 3).fill(0.9), 3)
       );
 
-      this.object = object;
       this.scene.add(object);
 
       this.lazyRender();
     });
+  };
+
+  protected onPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+
+    this.isPointerDown = true;
+    this.path = [];
+
+    this.onPointerMove(event);
+  };
+
+  protected onPointerMove = (event: PointerEvent) => {
+    if (!this.object || !this.isPointerDown) return;
+
+    const x = (event.clientX / window.innerWidth) * 2 - 1;
+    const y = -(event.clientY / window.innerHeight) * 2 + 1;
+    this.raycaster.setFromCamera({ x, y }, this.camera);
+    const intersections = this.raycaster.intersectObject(this.object);
+
+    if (!intersections.length) return;
+
+    const { face, faceIndex } = intersections[0];
+
+    if (faceIndex === undefined || this.path.includes(faceIndex) || !face) {
+      return;
+    }
+
+    [face.a, face.b, face.c].forEach((vertexIndex) => {
+      this.object!.geometry.attributes.color.setXYZ(vertexIndex, 1, 0, 0);
+    });
+    this.object.geometry.attributes.color.needsUpdate = true;
+
+    this.lazyRender();
+
+    this.path.push(faceIndex);
+  };
+
+  protected onPointerUp = (event: PointerEvent) => {
+    if (event.button !== 0) return;
+
+    this.isPointerDown = false;
+
+    console.log(this.path);
   };
 }
