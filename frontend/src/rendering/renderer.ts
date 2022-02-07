@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader";
+import { Client } from "../client";
 
 export class Renderer {
   public renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -25,7 +26,7 @@ export class Renderer {
 
   protected lazyRenderTriggered = true;
 
-  constructor() {
+  constructor(protected client: Client) {
     const directionalLight = new THREE.DirectionalLight("white", 0.6);
     directionalLight.position.y = 1;
     this.camera.add(directionalLight);
@@ -85,6 +86,8 @@ export class Renderer {
   };
 
   public loadObject = (url: string) => {
+    this.client.sendObject(url);
+
     this.loader.load(url, (object) => {
       if (!object.children.length) return;
 
@@ -147,6 +150,8 @@ export class Renderer {
 
     this.isPointerDown = false;
 
+    if (!this.path.length) return;
     console.log(this.path);
+    this.client.sendPath(this.path);
   };
 }

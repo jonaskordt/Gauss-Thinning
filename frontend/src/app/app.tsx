@@ -6,9 +6,9 @@ import { ImportZone } from "../components";
 import { useIsDraggedOver } from "../utils";
 import { Client } from "../client";
 
-const renderer = new Renderer();
 const client = new Client();
 client.connect();
+const renderer = new Renderer(client);
 
 const Cover = styled.div`
   position: absolute;

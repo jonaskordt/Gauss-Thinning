@@ -44,7 +44,13 @@ export const ImportZone: React.FC<{
 
       const file = event.dataTransfer.items[0].getAsFile();
       if (!file || !file.name.endsWith(".obj")) return;
-      importFile(URL.createObjectURL(file));
+
+      const fileReader = new FileReader();
+      fileReader.onload = (event) => {
+        if (!event.target?.result) return;
+        importFile(event.target?.result as string);
+      };
+      fileReader.readAsDataURL(file);
     },
     [onDrop, importFile]
   );
