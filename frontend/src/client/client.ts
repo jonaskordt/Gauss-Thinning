@@ -11,17 +11,35 @@ export class Client {
     this.webSocket.onopen = () => {
       this.isConnected = true;
     };
-    this.webSocket.onmessage = (event: MessageEvent) =>
-      this.renderer.updateObject(JSON.parse(event.data)["update"]);
+    this.webSocket.onmessage = this.handleMessage;
   }
 
-  public sendObject(dataURL: string) {
+  public importObject(dataURL: string) {
     if (!this.webSocket || !this.isConnected) return;
-    this.webSocket?.send(JSON.stringify({ object: dataURL }));
+    this.webSocket?.send(
+      JSON.stringify({ request: "import", object: dataURL })
+    );
   }
 
-  public sendPath(path: number[]) {
+  public requestLocalThinning(path: number[]) {
     if (!this.webSocket || !this.isConnected) return;
-    this.webSocket?.send(JSON.stringify({ path }));
+    this.webSocket?.send(JSON.stringify({ request: "local_thinning", path }));
   }
+
+  private handleMessage = (event: MessageEvent) => {
+    const message = JSON.parse(event.data);
+
+    const data_url = message.object;
+
+    switch (message.kind) {
+      case "import":
+        this.renderer.loadObject(data_url);
+        return;
+      case "update":
+        this.renderer.updateObject(data_url);
+        return;
+      default:
+        return;
+    }
+  };
 }

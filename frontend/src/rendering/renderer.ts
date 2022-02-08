@@ -90,9 +90,11 @@ export class Renderer {
     }
   };
 
-  public loadObject = (url: string) => {
-    this.client.sendObject(url);
+  public importObject = (url: string) => {
+    this.client.importObject(url);
+  };
 
+  public loadObject = (url: string) => {
     this.loader.load(url, (object) => {
       if (!object.children.length) return;
 
@@ -109,7 +111,7 @@ export class Renderer {
         new THREE.BufferAttribute(new Float32Array(count * 3).fill(0.9), 3)
       );
 
-      this.scene.add(object);
+      this.scene.add(this.object);
 
       this.lazyRender();
     });
@@ -173,7 +175,7 @@ export class Renderer {
     this.isPointerDown = false;
 
     if (!this.path.length) return;
-    console.log(this.path);
-    this.client.sendPath(this.path);
+
+    this.client.requestLocalThinning(this.path);
   };
 }

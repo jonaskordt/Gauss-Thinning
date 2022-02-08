@@ -31,7 +31,7 @@ export const App: React.FC = () => {
 
   const [isObjectLoaded, setIsObjetLoaded] = useState(false);
   const importFile = useCallback((url: string) => {
-    renderer.loadObject(url);
+    renderer.importObject(url);
     setIsObjetLoaded(true);
   }, []);
 

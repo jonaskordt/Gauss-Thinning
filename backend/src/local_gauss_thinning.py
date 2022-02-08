@@ -2,7 +2,7 @@ import math
 import numpy as np
 from numpy import linalg as LA
 import igl
-from .gauss_thinning import *
+from gauss_thinning import *
 
 
 def find_active_triangles(path, adj, B, r):

@@ -8,14 +8,15 @@ import os
 import numpy as np
 import base64
 from local_gauss_thinning import local_gauss_thinning
-
-v: Optional[np.array] = None
-f: Optional[np.array] = None
-tmp_file_name = "tmp.obj"
+from gauss_thinning import center
 
 
 async def socket(websocket):
-    async def send_updated_vertecies(v_dash):
+    v: Optional[np.array] = None
+    f: Optional[np.array] = None
+    tmp_file_name = "tmp.obj"
+
+    async def send_vertecies(v_dash, kind="update"):
         igl.write_obj(tmp_file_name, v_dash, f)
         prefix = "data:application/octet-stream;base64,"
         data = open(tmp_file_name, "rb")
@@ -23,26 +24,30 @@ async def socket(websocket):
         data_url = prefix + base64.b64encode(contents).decode("utf-8")
         data.close()
         os.remove(tmp_file_name)
-        message = json.dumps({"update": data_url})
+        message = json.dumps({"kind": kind, "object": data_url})
         await websocket.send(message)
 
     async for message in websocket:
         data = json.loads(message)
-        if "object" in data:
+        if "request" not in data:
+            return
+
+        if data["request"] == "import":
             content = urlopen(data["object"])
             file = open(tmp_file_name, "w")
             file.write(content.read().decode("utf-8"))
             file.close()
             v, f = igl.read_triangle_mesh(tmp_file_name)
+            center(v)
             os.remove(tmp_file_name)
-        if "path" in data:
+            await send_vertecies(v, kind="import")
+        elif data["request"] == "local_thinning":
             if v is None or f is None:
                 return
             path = data["path"]
-            print(path)
 
             v = await local_gauss_thinning(
-                v, f, path=path, num_iterations=15, callback=send_updated_vertecies
+                v, f, path=path, num_iterations=10, callback=send_vertecies
             )
 
 
