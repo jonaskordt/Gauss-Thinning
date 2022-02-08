@@ -1,6 +1,6 @@
 # Gauss Thinning Backend
 
-This project contains a small websocket server which will do local gauss thinning for the frontend in the future.
+This project contains a small websocket server which does local gauss thinning for the frontend.
 
 ## Installation
 
