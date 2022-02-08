@@ -18,7 +18,10 @@ export class Renderer {
 
   protected orbitControls: OrbitControls;
   protected object?: THREE.Mesh;
-  protected material = new THREE.MeshStandardMaterial({ vertexColors: true });
+  protected material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    side: THREE.DoubleSide,
+  });
 
   protected raycaster = new THREE.Raycaster();
   protected path: number[] = [];

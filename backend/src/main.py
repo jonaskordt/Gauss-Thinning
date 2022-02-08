@@ -51,7 +51,7 @@ async def socket(websocket):
             )
 
 
-start_server = websockets.serve(socket, "localhost", 5678)
+start_server = websockets.serve(socket, "localhost", 5678, max_size=None)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
