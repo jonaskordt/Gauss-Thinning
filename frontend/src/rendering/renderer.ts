@@ -6,6 +6,8 @@ import { Client } from "../client";
 export class Renderer {
   public renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
+  protected client: Client;
+
   protected scene = new THREE.Scene();
   protected camera = new THREE.PerspectiveCamera(
     60,
@@ -26,7 +28,10 @@ export class Renderer {
 
   protected lazyRenderTriggered = true;
 
-  constructor(protected client: Client) {
+  constructor() {
+    this.client = new Client(this);
+    this.client.connect();
+
     const directionalLight = new THREE.DirectionalLight("white", 0.6);
     directionalLight.position.y = 1;
     this.camera.add(directionalLight);
@@ -105,6 +110,23 @@ export class Renderer {
       );
 
       this.scene.add(object);
+
+      this.lazyRender();
+    });
+  };
+
+  public updateObject = (url: string) => {
+    this.loader.load(url, (object) => {
+      if (!this.object || !object.children.length) return;
+
+      const update = object.children[0] as THREE.Mesh;
+      const updatePositions = update.geometry.attributes.position;
+      const updateNormals = update.geometry.attributes.normal;
+
+      this.object.geometry.setAttribute("position", updatePositions);
+      this.object.geometry.attributes.position.needsUpdate = true;
+      this.object.geometry.setAttribute("normal", updateNormals);
+      this.object.geometry.attributes.normal.needsUpdate = true;
 
       this.lazyRender();
     });
