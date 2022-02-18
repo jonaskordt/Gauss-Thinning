@@ -5,7 +5,10 @@ import igl
 from gauss_thinning import *
 
 
-def find_active_triangles(path, adj, B, r):
+def expand_path(path, r, V, F):
+    nv = len(V)
+    adj = triangle_adjacency(F, nv)
+    B = igl.barycenter(V, F)
     stack = []
     flag = [-1 for _ in range(len(B))]
     flag_result = [0 for _ in range(len(B))]
@@ -127,13 +130,7 @@ async def local_gauss_thinning(
     L = igl.cotmatrix(V, F)
     M = igl.massmatrix(V, F, igl.MASSMATRIX_TYPE_BARYCENTRIC).todense()
     B = igl.barycenter(V, F)
-    active_triangles = find_active_triangles(path, TT, B, brush_size)
-
-    colors = np.zeros(len(F))
-    for i in active_triangles:
-        colors[i] = 0.5
-    for i in path:
-        colors[i] = 1
+    active_triangles = expand_path(path, brush_size, V, F)
 
     if smooth:
         A = -L + smooth * np.dot(L.T, L) + eps * M
