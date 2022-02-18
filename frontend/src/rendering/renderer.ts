@@ -6,8 +6,6 @@ import { Client } from "../client";
 export class Renderer {
   public renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
-  protected client: Client;
-
   protected scene = new THREE.Scene();
   protected camera = new THREE.PerspectiveCamera(
     60,
@@ -31,10 +29,7 @@ export class Renderer {
 
   protected lazyRenderTriggered = true;
 
-  constructor() {
-    this.client = new Client(this);
-    this.client.connect();
-
+  constructor(protected client: Client) {
     const directionalLight = new THREE.DirectionalLight("white", 0.6);
     directionalLight.position.y = 1;
     this.camera.add(directionalLight);
@@ -91,10 +86,6 @@ export class Renderer {
       this.lazyRenderTriggered = false;
       this.eagerRender();
     }
-  };
-
-  public importObject = (url: string) => {
-    this.client.importObject(url);
   };
 
   public loadObject = (url: string) => {

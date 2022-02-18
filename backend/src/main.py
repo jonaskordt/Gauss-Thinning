@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional
+from typing import List, Optional
 from urllib.request import urlopen
 import websockets
 import json
@@ -7,13 +7,14 @@ import igl
 import os
 import numpy as np
 import base64
-from local_gauss_thinning import local_gauss_thinning
+from local_gauss_thinning import local_gauss_thinning, constraint_gauss_thinning
 from gauss_thinning import center
 
 
 async def socket(websocket):
     v: Optional[np.array] = None
     f: Optional[np.array] = None
+    touched_face_indices: Optional[List[int]] = None
     tmp_file_name = "tmp.obj"
 
     async def send_vertecies(v_dash, kind="update"):
@@ -38,6 +39,7 @@ async def socket(websocket):
             file.write(content.read().decode("utf-8"))
             file.close()
             v, f = igl.read_triangle_mesh(tmp_file_name)
+            touched_face_indices = []
             center(v)
             os.remove(tmp_file_name)
             await send_vertecies(v, kind="import")
@@ -46,8 +48,28 @@ async def socket(websocket):
                 return
             path = data["path"]
 
-            v = await local_gauss_thinning(
+            v, touched = await local_gauss_thinning(
                 v, f, path=path, num_iterations=10, callback=send_vertecies
+            )
+            for face_id in touched:
+                if face_id not in touched_face_indices:
+                    touched_face_indices.append(face_id)
+        elif data["request"] == "global_thinning":
+            if v is None or f is None:
+                return
+
+            active_faces = (
+                [
+                    face_id
+                    for face_id in range(len(f))
+                    if face_id not in touched_face_indices
+                ]
+                if touched_face_indices is not None
+                else range(len(f))
+            )
+
+            v = await constraint_gauss_thinning(
+                v, f, active_faces, num_iterations=10, callback=send_vertecies
             )
 
 

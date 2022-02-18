@@ -4,9 +4,14 @@ export class Client {
   protected webSocket?: WebSocket;
   protected isConnected = false;
 
-  constructor(protected renderer: Renderer) {}
+  public renderer: Renderer;
 
-  public connect() {
+  constructor() {
+    this.connect();
+    this.renderer = new Renderer(this);
+  }
+
+  protected connect() {
     this.webSocket = new WebSocket("ws://localhost:5678/");
     this.webSocket.onopen = () => {
       this.isConnected = true;
@@ -21,10 +26,15 @@ export class Client {
     );
   }
 
-  public requestLocalThinning(path: number[]) {
+  public requestLocalThinning = (path: number[]) => {
     if (!this.webSocket || !this.isConnected) return;
     this.webSocket?.send(JSON.stringify({ request: "local_thinning", path }));
-  }
+  };
+
+  public requestGlobalThinning = () => {
+    if (!this.webSocket || !this.isConnected) return;
+    this.webSocket?.send(JSON.stringify({ request: "global_thinning" }));
+  };
 
   private handleMessage = (event: MessageEvent) => {
     const message = JSON.parse(event.data);

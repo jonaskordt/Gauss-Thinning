@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import { GlobalStyles } from "../theme";
-import { Renderer } from "../rendering";
 import { ImportZone } from "../components";
 import { useIsDraggedOver } from "../utils";
+import { Client } from "../client";
 
-const renderer = new Renderer();
+const client = new Client();
+const { renderer } = client;
 
 const Cover = styled.div`
   position: absolute;
@@ -13,6 +14,25 @@ const Cover = styled.div`
   bottom: 0;
   right: 0;
   left: 0;
+`;
+
+const GlobalButton = styled.button`
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  overflow: visible;
+  text-transform: none;
+
+  padding: 10px;
+  background-color: lightgray;
+  border-radius: 10px;
+  font-size: 14px;
+  border: 1px solid gray;
+  cursor: pointer;
 `;
 
 export const App: React.FC = () => {
@@ -31,7 +51,7 @@ export const App: React.FC = () => {
 
   const [isObjectLoaded, setIsObjetLoaded] = useState(false);
   const importFile = useCallback((url: string) => {
-    renderer.importObject(url);
+    client.importObject(url);
     setIsObjetLoaded(true);
   }, []);
 
@@ -54,6 +74,12 @@ export const App: React.FC = () => {
         importFile={importFile}
         isObjectLoaded={isObjectLoaded}
       />
+
+      {isObjectLoaded && (
+        <GlobalButton onPointerDown={client.requestGlobalThinning}>
+          Global Thinning
+        </GlobalButton>
+      )}
     </Cover>
   );
 };

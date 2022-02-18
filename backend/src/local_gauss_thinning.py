@@ -106,11 +106,10 @@ def fit_active_normals(nbh, N, cosine_threshold, sigma=1):
     return N2
 
 
-async def local_gauss_thinning(
+async def constraint_gauss_thinning(
     V,
     F,
-    path,
-    brush_size=0.05,
+    active_triangles,
     num_iterations=100,
     min_cone_angle=2.5,
     smooth=1e-5,
@@ -130,7 +129,6 @@ async def local_gauss_thinning(
     L = igl.cotmatrix(V, F)
     M = igl.massmatrix(V, F, igl.MASSMATRIX_TYPE_BARYCENTRIC).todense()
     B = igl.barycenter(V, F)
-    active_triangles = expand_path(path, brush_size, V, F)
 
     if smooth:
         A = -L + smooth * np.dot(L.T, L) + eps * M
@@ -159,3 +157,17 @@ async def local_gauss_thinning(
         print(f"Finished iteration {i}.")
 
     return V_dash
+
+
+async def local_gauss_thinning(
+    V,
+    F,
+    path,
+    brush_size=0.05,
+    **kwargs,
+):
+    active_triangles = expand_path(path, brush_size, V, F)
+    return (
+        await constraint_gauss_thinning(V, F, active_triangles, **kwargs),
+        active_triangles,
+    )
