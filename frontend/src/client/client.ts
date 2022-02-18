@@ -11,13 +11,14 @@ export class Client {
     this.renderer = new Renderer(this);
   }
 
-  protected connect() {
+  protected connect = () => {
     this.webSocket = new WebSocket("ws://localhost:5678/");
     this.webSocket.onopen = () => {
       this.isConnected = true;
     };
+    this.webSocket.onerror = () => setTimeout(this.connect, 1000);
     this.webSocket.onmessage = this.handleMessage;
-  }
+  };
 
   public importObject(dataURL: string) {
     if (!this.webSocket || !this.isConnected) return;
