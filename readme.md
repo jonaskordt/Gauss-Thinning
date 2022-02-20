@@ -37,3 +37,5 @@ conda install jupyter
 ```
 
 If you have problems with the pythreejs rendering, check out [their documentation](https://github.com/jupyter-widgets/pythreejs).
+
+Only Chrome is supported right now.

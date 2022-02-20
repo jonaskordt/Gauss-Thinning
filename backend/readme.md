@@ -18,7 +18,7 @@ To install all our packages just run:
 
 ```bash
 conda install igl
-conda install websockets
+pip install websockets
 ```
 
 ## Running the backend
