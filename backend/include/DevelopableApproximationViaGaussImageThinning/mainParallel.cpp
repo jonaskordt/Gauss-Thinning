@@ -16,22 +16,13 @@
 #include <array>
 #include <omp.h>
 
+#include <pybind11/pybind11.h>
+#include <pybind11/eigen.h>
 
-
+namespace py = pybind11;
 
 #pragma omp declare reduction (+: Eigen::MatrixXd: omp_out=omp_out+omp_in)\
      initializer(omp_priv=Eigen::MatrixXd::Zero(omp_orig.rows(), omp_orig.cols()))
-
-
-#include <pybind11/pybind11.h>
-
-int add(int i, int j) {
-    return i + j;
-}
-
-PYBIND11_MODULE(mainParallel, m) {
-    m.def("add", &add, "A function that adds two numbers");
-}
 
 
 void findRotations(const Eigen::MatrixXd& N0,
@@ -199,27 +190,29 @@ void center(Eigen::MatrixXd& V) {
     V /= 2. * V.rowwise().norm().maxCoeff();
 }
 
-void gaussThinning(const std::string &mesh_folder,
-                   const Eigen::MatrixXd &V_in,
-                   const Eigen::MatrixXi &F,
+void gaussThinning( // const std::string &mesh_folder,
                    Eigen::MatrixXd &V,
-                   const int number_iterations = 100,
-                   double minConeAngle = 2.5,
-                   double smooth = 1e-5,
-                   double start_angle = 25,
-                   double radius = 0.1,
-                   double sigma = 2.) {
-    
+                   const Eigen::MatrixXi &F
+                   ) {
+   
+   const int number_iterations = 100;
+   double minConeAngle = 2.5;
+   double smooth = 1e-5;
+   double start_angle = 25;
+   double radius = 0.1;
+   double sigma = 2.;
+
     double coneAngle = start_angle;
     double r = radius;
     double r_squared = r*r;
     double eps = 1e-3;
     
-    V = V_in;
+    // Eigen::MatrixXd &V = V_in;
+
     const auto nv = V.rows();
     center(V);
     
-    igl::writeOFF(mesh_folder + "/normalized.off", V, F);
+    // igl::writeOFF(mesh_folder + "/normalized.off", V, F);
     
     Eigen::SparseMatrix<double> I(nv, nv);
     I.setIdentity();
@@ -252,85 +245,15 @@ void gaussThinning(const std::string &mesh_folder,
     return;
 }
 
-void runExperiment(std::string folder, std::string inputFile, std::string outputFile, const int iters, const double minAngle, const double start_angle = 25, const double radius = 0.1, const double smooth = 1e-5, const double sigma = 2) {
-    Eigen::MatrixXd V_in, V_out;
-    Eigen::MatrixXi F;
-    igl::read_triangle_mesh(folder + "/" + inputFile, V_in, F);
-    gaussThinning(folder, V_in, F, V_out, iters, minAngle, smooth, start_angle, radius, sigma);
-    std::cout << folder << ": done" << std::endl;
-    igl::write_triangle_mesh(folder + "/" + outputFile, V_out, F);
-}
+// void runExperiment(std::string folder, std::string inputFile, std::string outputFile, const int iters, const double minAngle, const double start_angle = 25, const double radius = 0.1, const double smooth = 1e-5, const double sigma = 2) {
+//     Eigen::MatrixXd V_in, V_out;
+//     Eigen::MatrixXi F;
+//     igl::read_triangle_mesh(folder + "/" + inputFile, V_in, F);
+//     gaussThinning(folder, V_in, F, V_out , iters, minAngle, smooth, start_angle, radius, sigma);
+//     std::cout << folder << ": done" << std::endl;
+//     igl::write_triangle_mesh(folder + "/" + outputFile, V_out, F);
+// }
 
-int main(int argc, const char * argv[]) {
-    Eigen::initParallel();
-    
-    if(argc < 6) {
-        std::cout << "Need input file, output file, output directory, number of iterations and minimum search cone. Running default experiments..." << std::endl;
-       
-        /* run default experiments here .... */
-        runExperiment("./examples/architecture", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/boat", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/bumpy", "input.off", "out.obj", 150, 7.5);
-        
-        runExperiment("./examples/bunny", "input.off", "out.obj", 500, 2.5);
-
-        runExperiment("./examples/bunny_high", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/bunny_small", "input.off", "out.obj", 500, 5.0);
-
-        runExperiment("./examples/coffee", "input.off", "out.obj", 500, 2.5);
-
-        runExperiment("./examples/cone", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/cone_high", "input.off", "out.obj", 100, 2.5, 25, 0.015);
-
-        runExperiment("./examples/curved_fold", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/cylinder", "input.off", "out.obj", 300, 7.5);
-
-        runExperiment("./examples/dog", "input.off", "out.obj", 100, 5.0);
-
-        runExperiment("./examples/dome", "input.off", "out.obj", 100, 7.5);
-
-        runExperiment("./examples/dress_high", "input.off", "out.obj", 100, 7.5);
-
-        runExperiment("./examples/drill", "input.off", "out.obj", 100, 7.5);
-
-        runExperiment("./examples/einstein", "input.off", "out.obj", 300, 7.5, 60, 0.015);
-
-        runExperiment("./examples/face", "input.off", "out.obj", 100, 5.0);
-
-        runExperiment("./examples/fandisk", "input.off", "out.obj", 1000, 5.0);
-
-        runExperiment("./examples/fertility", "input.off", "out.obj", 100, 7.5);
-
-        runExperiment("./examples/guitar", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/lilium", "input.off", "out.obj", 100, 5.0);
-
-        runExperiment("./examples/mask", "input.off", "out.obj", 500, 2.5);
-
-        runExperiment("./examples/nut", "input.off", "out.obj", 100, 2.5);
-
-        runExperiment("./examples/swing", "input.off", "out.obj", 500, 5.0);
-
-        runExperiment("./examples/washington", "input.off", "out.obj", 500, 5.0, 30, 0.045);
-    } else
-    {
-        std::string  infile = argv[1];
-        std::string  outfile = argv[2];
-        std::string  folder = argv[3];
-        
-        auto numIters = std::atoi(argv[4]);
-        auto minAngle = std::stold(argv[5]);
-        auto start_angle = 25;
-
-        std::cout << "Running on " << omp_get_max_threads() << " threads." <<std::endl;
-        std::cout << "Processing " << infile << " with " << numIters << " iterations and mimimum cone angle " << minAngle << ". Output directory is " << folder << std::endl;
-        runExperiment(folder, infile, outfile, numIters, minAngle, start_angle);
-    }
-    
-    return 0;
+PYBIND11_MODULE(mainParallel, m) {
+    m.def("gaussThinning", &gaussThinning, py::arg("V").noconvert(), py::arg("F"));
 }

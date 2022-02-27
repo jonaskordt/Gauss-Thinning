@@ -11,6 +11,11 @@ from local_gauss_thinning import local_gauss_thinning, constraint_gauss_thinning
 from gauss_thinning import center
 
 
+# add custom pybind lib
+import sys
+sys.path.insert(0,'../include/DevelopableApproximationViaGaussImageThinning')
+from mainParallel import gaussThinning
+
 async def socket(websocket):
     v: Optional[np.array] = None
     f: Optional[np.array] = None
@@ -38,9 +43,11 @@ async def socket(websocket):
             file = open(tmp_file_name, "w")
             file.write(content.read().decode("utf-8"))
             file.close()
+            
             v, f = igl.read_triangle_mesh(tmp_file_name)
             touched_face_indices = []
             center(v)
+
             os.remove(tmp_file_name)
             await send_vertecies(v, kind="import")
         elif data["request"] == "local_thinning":
@@ -68,10 +75,8 @@ async def socket(websocket):
                 else range(len(f))
             )
 
-            v = await constraint_gauss_thinning(
-                v, f, active_faces, num_iterations=10, callback=send_vertecies
-            )
-
+            gaussThinning(v, f)
+            await send_vertecies(v, kind="import")
 
 start_server = websockets.serve(socket, "localhost", 5678, max_size=None)
 
