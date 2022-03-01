@@ -190,7 +190,7 @@ void center(Eigen::MatrixXd& V) {
     V /= 2. * V.rowwise().norm().maxCoeff();
 }
 
-void gaussThinning( // const std::string &mesh_folder,
+Eigen::MatrixXd gaussThinning( // const std::string &mesh_folder,
                    Eigen::MatrixXd &V,
                    const Eigen::MatrixXi &F
                    ) {
@@ -242,7 +242,7 @@ void gaussThinning( // const std::string &mesh_folder,
         assembleRHS(C, V, F, rot, b);
         V = chol.solve(eps * M * V - b);
     }
-    return;
+    return V;
 }
 
 // void runExperiment(std::string folder, std::string inputFile, std::string outputFile, const int iters, const double minAngle, const double start_angle = 25, const double radius = 0.1, const double smooth = 1e-5, const double sigma = 2) {

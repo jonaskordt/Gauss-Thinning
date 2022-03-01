@@ -75,8 +75,8 @@ async def socket(websocket):
                 else range(len(f))
             )
 
-            gaussThinning(v, f)
-            await send_vertecies(v, kind="import")
+            v2 = gaussThinning(v, f)
+            await send_vertecies(v2)
 
 start_server = websockets.serve(socket, "localhost", 5678, max_size=None)
 
