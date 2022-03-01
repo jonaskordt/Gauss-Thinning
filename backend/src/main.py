@@ -13,7 +13,7 @@ from gauss_thinning import center
 
 # add custom pybind lib
 import sys
-sys.path.insert(0,'../include/DevelopableApproximationViaGaussImageThinning')
+sys.path.insert(0,'../third_party/DevelopableApproximationViaGaussImageThinning')
 from mainParallel import gaussThinning
 
 async def socket(websocket):
