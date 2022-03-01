@@ -1,10 +1,8 @@
-PATHON_LIB_DIR = $(shell python -c "import site; print(''.join(site.getsitepackages()))")
-
 CC = g++
 CCFLAGS = -std=c++11 -O3 -Wno-format -shared -fPIC
 
 INC_DIRS = /usr/include /usr/include/eigen3 ../libigl/include
-INC_FLAGS = -L/usr/lib -L$(PATHON_LIB_DIR)/../../../lib/libpython3.so $(addprefix -I,$(INC_DIRS)) $(shell python3 -m pybind11 --includes) 
+INC_FLAGS = -L/usr/lib $(addprefix -I,$(INC_DIRS)) $(shell python3 -m pybind11 --includes) 
 EXAMPLES = architecture boat coffee cone cylinder  dome drill face fandisk  guitar lilium mask nut swing dog fertility bumpy bunny cone_high
 
 mainParallel: mainParallel.cpp
