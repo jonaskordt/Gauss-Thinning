@@ -26,3 +26,10 @@ pip install websockets
 ```bash
 python src/main.py
 ```
+
+## Running the backend with docker
+
+```bash
+docker build -t gauss_backend .
+docker run -dp 5678:5678 gauss_backend
+```

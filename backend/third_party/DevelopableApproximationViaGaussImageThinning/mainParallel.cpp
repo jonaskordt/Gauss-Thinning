@@ -195,27 +195,21 @@ Eigen::MatrixXd gaussThinning( // const std::string &mesh_folder,
                    const Eigen::MatrixXi &F
                    ) {
    
-   const int number_iterations = 100;
-   double minConeAngle = 2.5;
-   double smooth = 1e-5;
-   double start_angle = 25;
-   double radius = 0.1;
-   double sigma = 2.;
+    const int number_iterations = 100;
+    double minConeAngle = 2.5;
+    double smooth = 1e-5;
+    double start_angle = 25;
+    double radius = 0.1;
+    double sigma = 2.;
 
     double coneAngle = start_angle;
     double r = radius;
     double r_squared = r*r;
     double eps = 1e-3;
-    
-    // Eigen::MatrixXd &V = V_in;
 
     const auto nv = V.rows();
     center(V);
     
-    // igl::writeOFF(mesh_folder + "/normalized.off", V, F);
-    
-    Eigen::SparseMatrix<double> I(nv, nv);
-    I.setIdentity();
     Eigen::MatrixXd B, b, C, N, N2;
     std::vector<Eigen::Matrix3d> rot;
     Eigen::SparseMatrix<double> L, M;
@@ -245,15 +239,112 @@ Eigen::MatrixXd gaussThinning( // const std::string &mesh_folder,
     return V;
 }
 
-// void runExperiment(std::string folder, std::string inputFile, std::string outputFile, const int iters, const double minAngle, const double start_angle = 25, const double radius = 0.1, const double smooth = 1e-5, const double sigma = 2) {
-//     Eigen::MatrixXd V_in, V_out;
-//     Eigen::MatrixXi F;
-//     igl::read_triangle_mesh(folder + "/" + inputFile, V_in, F);
-//     gaussThinning(folder, V_in, F, V_out , iters, minAngle, smooth, start_angle, radius, sigma);
-//     std::cout << folder << ": done" << std::endl;
-//     igl::write_triangle_mesh(folder + "/" + outputFile, V_out, F);
-// }
+Eigen::MatrixXd createMatrixXd() {
+    Eigen::MatrixXd M;
+    return M;
+}
+
+std::vector<Eigen::Matrix3d> createRotations() {
+    std::vector<Eigen::Matrix3d> R;
+    return R;
+}
+
+std::vector<std::vector<int>> createInitialNBHS(const Eigen::MatrixXi &F) {
+    std::vector<std::vector<int>> nbhs(F.rows(), std::vector<int>(1));
+    return nbhs;
+}
+
+Eigen::MatrixXd getCotmatrixEntries(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F) {
+    Eigen::MatrixXd C;
+    igl::cotmatrix_entries(V, F, C);
+    return C;
+}
+
+Eigen::SparseMatrix<double> getMassmatrix(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F) {
+    Eigen::SparseMatrix<double> M;
+    igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_BARYCENTRIC, M);
+    return M;
+}
+
+Eigen::SparseMatrix<double> getCotmatrix(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F) {
+    Eigen::SparseMatrix<double> L;
+    igl::cotmatrix(V, F, L);
+    return L;
+}
+
+Eigen::MatrixXd thinningIteration(
+    const Eigen::MatrixXd &V, 
+    const Eigen::MatrixXi &F,
+    const Eigen::SparseMatrix<double> &M,
+    const Eigen::SparseMatrix<double> &L,
+    Eigen::MatrixXd &N,
+    Eigen::MatrixXd &N2,
+    Eigen::MatrixXd &B,
+    std::vector<std::vector<int>> &tt,
+    std::vector<std::vector<int>> &nbhs,
+    std::vector<Eigen::Matrix3d> &rot,
+    Eigen::MatrixXd &C,
+    Eigen::MatrixXd &b,
+    double r_squared,
+    double coneAngle,
+    double minConeAngle,
+    double sigma,
+    double eps,
+    double smooth
+) {
+    // The solver state cannot be copied over to python. Thus it has to be recreated for every iteration.
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> chol;
+    if(smooth) {
+        chol.compute(-L + smooth * L.transpose() * L + eps * M);
+    } else {
+        chol.compute(-L + eps * M);
+    }
+
+    igl::per_face_normals(V, F, N);
+    igl::barycenter(V, F, B);
+    nbhs = collectNeighbours(tt, B, N, r_squared, coneAngle, nbhs);
+    if(coneAngle > minConeAngle) coneAngle *= .95;
+    fitNormals(nbhs, V, N, N2, coneAngle, sigma);
+    findRotations(N, N2, rot);
+    assembleRHS(C, V, F, rot, b);
+    return chol.solve(eps * M * V - b);
+}
 
 PYBIND11_MODULE(mainParallel, m) {
+    py::class_<std::vector<std::vector<int>>>(m, "TriangleAdjacency");
+    py::class_<std::vector<Eigen::Matrix3d>>(m, "Rotations");
+    py::class_<Eigen::SparseMatrix<double>>(m, "SparseMatrix");
+    // py::class_<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>>(m, "Solver");
+    
+    m.def("createInitialNBHS", &createInitialNBHS, py::arg("F"));
+    m.def("createMatrixXd", &createMatrixXd);
+    m.def("createRotations", &createRotations);
+    m.def("triangleAdjacency", &triangleAdjacency, py::arg("F"), py::arg("nv"));
+    m.def("getCotmatrixEntries", &getCotmatrixEntries, py::arg("V"), py::arg("F"));
+    m.def("getMassmatrix", &getMassmatrix, py::arg("V"), py::arg("F"));
+    m.def("getCotmatrix", &getCotmatrix, py::arg("V"), py::arg("F"));
+    // m.def("getSolver", &getSolver, py::arg("V"), py::arg("F"), py::arg("M"), py::arg("smooth"), py::arg("eps"));
     m.def("gaussThinning", &gaussThinning, py::arg("V").noconvert(), py::arg("F"));
+    m.def(
+        "thinningIteration",
+        &thinningIteration,
+        py::arg("V").noconvert(),
+        py::arg("F"),
+        py::arg("M"),
+        py::arg("L"),
+        py::arg("N"),
+        py::arg("N2"),
+        py::arg("B"),
+        py::arg("tt"),
+        py::arg("nbhs"),
+        py::arg("rot"),
+        py::arg("C"),
+        py::arg("b"),
+        py::arg("r_squared"),
+        py::arg("coneAngle"),
+        py::arg("minConeAngle"),
+        py::arg("sigma"),
+        py::arg("eps"),
+        py::arg("smooth")
+    );
 }

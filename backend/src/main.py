@@ -7,7 +7,7 @@ import igl
 import os
 import numpy as np
 import base64
-from local_gauss_thinning import local_gauss_thinning, constraint_gauss_thinning
+from local_gauss_thinning import cpp_local_gauss_thinning, cpp_constraint_gauss_thinning
 from gauss_thinning import center
 
 
@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0,'../third_party/DevelopableApproximationViaGaussImageThinning')
 from mainParallel import gaussThinning
 
-async def socket(websocket):
+async def socket(websocket, path):
     v: Optional[np.array] = None
     f: Optional[np.array] = None
     touched_face_indices: Optional[List[int]] = None
@@ -55,7 +55,7 @@ async def socket(websocket):
                 return
             path = data["path"]
 
-            v, touched = await local_gauss_thinning(
+            v, touched = await cpp_local_gauss_thinning(
                 v, f, path=path, num_iterations=10, callback=send_vertecies
             )
             for face_id in touched:
@@ -75,8 +75,9 @@ async def socket(websocket):
                 else range(len(f))
             )
 
-            v2 = gaussThinning(v, f)
-            await send_vertecies(v2)
+            v = await cpp_constraint_gauss_thinning(
+                v, f, active_faces, num_iterations=10, callback=send_vertecies
+            )
 
 start_server = websockets.serve(socket, "0.0.0.0", 5678, max_size=None)
 
