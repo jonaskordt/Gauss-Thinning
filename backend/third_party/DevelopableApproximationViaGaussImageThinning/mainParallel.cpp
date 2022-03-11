@@ -18,6 +18,7 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 
 namespace py = pybind11;
 
@@ -52,6 +53,7 @@ void findRotations(const Eigen::MatrixXd& N0,
 
 std::vector<std::vector<int>> collectNeighbours(const std::vector<std::vector<int>>& adj,
                                                 const Eigen::MatrixXd& V,
+                                                const std::vector<bool> active,
                                                 const Eigen::MatrixXd& N,
                                                 const double &rSquared,
                                                 const double &nr,
@@ -68,6 +70,9 @@ std::vector<std::vector<int>> collectNeighbours(const std::vector<std::vector<in
     }
     #pragma omp parallel for private(stacks)
     for(int i = 0; i < V.rows(); ++i) {
+        if (!active[i]) {
+            continue;
+        }
         const int t_id = omp_get_thread_num();
         stacks.clear();
         std::vector<int> result;
@@ -106,6 +111,12 @@ void fitNormals(const std::vector<std::vector<int>>& nbh,
     #pragma omp parallel for
     for(int i = 0; i < nv; ++i) {
         const auto& nbi = nbh[i];
+
+        if (nbi.size() == 0) {
+            N2.row(i) = N.row(i);
+            continue;
+        }
+
         Eigen::MatrixXd NN(nbi.size(), 3);
 
         for (int k = 0; k < nbi.size(); ++k) {
@@ -190,55 +201,6 @@ void center(Eigen::MatrixXd& V) {
     V /= 2. * V.rowwise().norm().maxCoeff();
 }
 
-Eigen::MatrixXd gaussThinning( // const std::string &mesh_folder,
-                   Eigen::MatrixXd &V,
-                   const Eigen::MatrixXi &F
-                   ) {
-   
-    const int number_iterations = 100;
-    double minConeAngle = 2.5;
-    double smooth = 1e-5;
-    double start_angle = 25;
-    double radius = 0.1;
-    double sigma = 2.;
-
-    double coneAngle = start_angle;
-    double r = radius;
-    double r_squared = r*r;
-    double eps = 1e-3;
-
-    const auto nv = V.rows();
-    center(V);
-    
-    Eigen::MatrixXd B, b, C, N, N2;
-    std::vector<Eigen::Matrix3d> rot;
-    Eigen::SparseMatrix<double> L, M;
-    std::vector<std::vector<int>> nbhs(F.rows(), std::vector<int>(1));
-    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> chol;
-    auto tt = triangleAdjacency(F, nv);
-    igl::cotmatrix_entries(V, F, C);
-    igl::cotmatrix(V, F, L);
-    igl::massmatrix(V, F, igl::MASSMATRIX_TYPE_BARYCENTRIC, M);
-    
-    if(smooth) {
-        chol.compute(-L + smooth * L.transpose() * L + eps * M);
-    } else {
-        chol.compute(-L + eps * M);
-    }
-    
-    for(int k = 0; k < number_iterations; ++k) {
-        igl::per_face_normals(V, F, N);
-        igl::barycenter(V, F, B);
-        nbhs = collectNeighbours(tt, B, N, r_squared, coneAngle, nbhs);
-        if(coneAngle > minConeAngle) coneAngle *= .95;
-        fitNormals(nbhs, V, N, N2, coneAngle, sigma);
-        findRotations(N, N2, rot);
-        assembleRHS(C, V, F, rot, b);
-        V = chol.solve(eps * M * V - b);
-    }
-    return V;
-}
-
 Eigen::MatrixXd createMatrixXd() {
     Eigen::MatrixXd M;
     return M;
@@ -275,6 +237,7 @@ Eigen::SparseMatrix<double> getCotmatrix(const Eigen::MatrixXd &V, const Eigen::
 Eigen::MatrixXd thinningIteration(
     const Eigen::MatrixXd &V, 
     const Eigen::MatrixXi &F,
+    const std::vector<bool> &active,
     const Eigen::SparseMatrix<double> &M,
     const Eigen::SparseMatrix<double> &L,
     Eigen::MatrixXd &N,
@@ -302,7 +265,7 @@ Eigen::MatrixXd thinningIteration(
 
     igl::per_face_normals(V, F, N);
     igl::barycenter(V, F, B);
-    nbhs = collectNeighbours(tt, B, N, r_squared, coneAngle, nbhs);
+    nbhs = collectNeighbours(tt, B, active, N, r_squared, coneAngle, nbhs);
     if(coneAngle > minConeAngle) coneAngle *= .95;
     fitNormals(nbhs, V, N, N2, coneAngle, sigma);
     findRotations(N, N2, rot);
@@ -314,7 +277,6 @@ PYBIND11_MODULE(mainParallel, m) {
     py::class_<std::vector<std::vector<int>>>(m, "TriangleAdjacency");
     py::class_<std::vector<Eigen::Matrix3d>>(m, "Rotations");
     py::class_<Eigen::SparseMatrix<double>>(m, "SparseMatrix");
-    // py::class_<Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>>>(m, "Solver");
     
     m.def("createInitialNBHS", &createInitialNBHS, py::arg("F"));
     m.def("createMatrixXd", &createMatrixXd);
@@ -323,13 +285,12 @@ PYBIND11_MODULE(mainParallel, m) {
     m.def("getCotmatrixEntries", &getCotmatrixEntries, py::arg("V"), py::arg("F"));
     m.def("getMassmatrix", &getMassmatrix, py::arg("V"), py::arg("F"));
     m.def("getCotmatrix", &getCotmatrix, py::arg("V"), py::arg("F"));
-    // m.def("getSolver", &getSolver, py::arg("V"), py::arg("F"), py::arg("M"), py::arg("smooth"), py::arg("eps"));
-    m.def("gaussThinning", &gaussThinning, py::arg("V").noconvert(), py::arg("F"));
     m.def(
         "thinningIteration",
         &thinningIteration,
         py::arg("V").noconvert(),
         py::arg("F"),
+        py::arg("active"),
         py::arg("M"),
         py::arg("L"),
         py::arg("N"),

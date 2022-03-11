@@ -7,19 +7,13 @@ import igl
 import os
 import numpy as np
 import base64
-from local_gauss_thinning import cpp_local_gauss_thinning, cpp_constraint_gauss_thinning
+from local_gauss_thinning import local_gauss_thinning, constraint_gauss_thinning
 from gauss_thinning import center
-
-
-# add custom pybind lib
-import sys
-sys.path.insert(0,'../third_party/DevelopableApproximationViaGaussImageThinning')
-from mainParallel import gaussThinning
 
 async def socket(websocket, path):
     v: Optional[np.array] = None
     f: Optional[np.array] = None
-    touched_face_indices: Optional[List[int]] = None
+    untouched_faces: Optional[List[bool]] = None
     tmp_file_name = "tmp.obj"
 
     async def send_vertecies(v_dash, kind="update"):
@@ -45,7 +39,7 @@ async def socket(websocket, path):
             file.close()
             
             v, f = igl.read_triangle_mesh(tmp_file_name)
-            touched_face_indices = []
+            untouched_faces = [True for _ in f]
             center(v)
 
             os.remove(tmp_file_name)
@@ -55,27 +49,23 @@ async def socket(websocket, path):
                 return
             path = data["path"]
 
-            v, touched = await cpp_local_gauss_thinning(
+            v, touched = await local_gauss_thinning(
                 v, f, path=path, num_iterations=10, callback=send_vertecies
             )
-            for face_id in touched:
-                if face_id not in touched_face_indices:
-                    touched_face_indices.append(face_id)
+            for i in range(len(touched)):
+                if touched[i]:
+                    untouched_faces[i] = False
         elif data["request"] == "global_thinning":
             if v is None or f is None:
                 return
 
             active_faces = (
-                [
-                    face_id
-                    for face_id in range(len(f))
-                    if face_id not in touched_face_indices
-                ]
-                if touched_face_indices is not None
-                else range(len(f))
+                untouched_faces
+                if untouched_faces is not None
+                else [True for _ in f]
             )
 
-            v = await cpp_constraint_gauss_thinning(
+            v = await constraint_gauss_thinning(
                 v, f, active_faces, num_iterations=10, callback=send_vertecies
             )
 
